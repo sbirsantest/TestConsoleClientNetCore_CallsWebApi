@@ -11,38 +11,16 @@ namespace ClientNetCoreConsole
         static async Task Main(string[] args)
         {
             using IHost host = CreateHostBuilder(args).Build();
-
-            using var scope = host.Services.CreateScope();
-            Task runHost = host.RunAsync();
-
-            using var http = scope.ServiceProvider.GetRequiredService<IHttpClientFactory>().CreateClient();
-            await PrintWeatherForecastAsync(http);
-
-            await runHost;
+            var testPrinter = ActivatorUtilities.CreateInstance<TestPrinter>(host.Services);
+            Console.WriteLine(await testPrinter.GetWeatherForecastAsync());
         }
 
         private static IHostBuilder CreateHostBuilder(string[] args) =>
             Host.CreateDefaultBuilder(args)
-            .ConfigureServices(services => 
-                services.AddHttpClient()
-                );
-
-        private static async Task PrintWeatherForecastAsync(HttpClient httpClient)
-        {
-            if (httpClient == null) throw new ArgumentNullException(nameof(httpClient));
-
-            try
+            .ConfigureServices((context, services) => 
             {
-                var response = await httpClient.GetAsync($"http://localhost:5000/WeatherForecast");
-                response.EnsureSuccessStatusCode();
-                var content = await response.Content.ReadAsStringAsync();
-                Console.WriteLine(content);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.Message);
-            }
-        }
-
+                services.AddHttpClient();
+                services.AddTransient<ITestPrinter, TestPrinter>();
+            });
     }
 }
